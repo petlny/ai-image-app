@@ -1,0 +1,42 @@
+name: Build APK
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y openjdk-17-jdk git zip unzip
+          pip install cython buildozer
+      - name: Build APK
+        run: |
+          buildozer init
+          cat > buildozer.spec <<EOF
+          [app]
+          title = AI图片编辑
+          package.name = aiimageapp
+          package.domain = com.example
+          source.dir = .
+          source.include_exts = py,png,jpg,kv,atlas
+          version = 1.0
+          requirements = python3,kivy,requests,pillow,android
+          orientation = portrait
+          android.permissions = INTERNET
+          android.api = 33
+          android.minapi = 21
+          android.ndk = 25b
+          android.sdk = 33
+          EOF
+          buildozer -v android debug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aiimageapp-apk
+          path: bin/*.apk

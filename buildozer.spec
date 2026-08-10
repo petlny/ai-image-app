@@ -1,0 +1,21 @@
+[app]
+title = AI图片编辑
+package.name = aiimageapp
+package.domain = com.example
+source.dir = .
+source.include_exts = py,png,jpg,kv,atlas
+version = 1.0
+requirements = python3,kivy,requests,pillow,android
+orientation = portrait
+osx.python_version = 3
+osx.kivy_version = 2.2.1
+fullscreen = 0
+android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
+android.api = 30
+android.minapi = 21
+android.ndk = 25b
+android.sdk = 30
+android.gradle_dependencies = 
+android.build_tools_version = 30.0.3
+android.platform_tools_version = 34.0.0
+p4a.source_dir = ~/.buildozer/python-for-android-develop

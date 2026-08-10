@@ -17,7 +17,6 @@ jobs:
           pip install cython buildozer
       - name: Build APK
         run: |
-          buildozer init
           cat > buildozer.spec <<EOF
           [app]
           title = AI图片编辑

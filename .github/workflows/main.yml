@@ -1,13 +1,11 @@
 name: Build APK
 on:
   push:
-  workflow_dispatch:   # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
     steps:
       - uses: actions/checkout@v4
 
@@ -53,11 +51,6 @@ jobs:
           android.accept_sdk_license = yes
           EOF
 
-          # 设置国内镜像加速 python-for-android 下载
-          export P4A_DOWNLOAD_ALTERNATIVES="true"
-          export P4A_MIRROR_URL="https://ghproxy.com/"
-
-          # 最多重试 3 次，每次失败后等待 10 秒
           for i in 1 2 3; do
             echo "Attempt $i..."
             if buildozer -v android debug; then
@@ -69,9 +62,13 @@ jobs:
             fi
           done
 
+      - name: Locate APK files
+        run: |
+          echo "Searching for APK files..."
+          find . -name "*.apk" -print
+
       - name: Upload APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: aiimageapp-apk
-          path: bin/*.apk
+          path: ./**/*.apk

@@ -1,21 +1,37 @@
 name: Build APK
-on: [push, workflow_dispatch]
+on:
+  push:
+  workflow_dispatch:   # 允许手动触发
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - name: Install dependencies
+
+      - name: Install system dependencies
         run: |
           sudo apt update
           sudo apt install -y openjdk-17-jdk git zip unzip
+
+      - name: Configure pip mirror
+        run: |
+          pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+          pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn
+
+      - name: Install Python build tools
+        run: |
+          pip install --upgrade pip
           pip install cython buildozer
-      - name: Build APK
+
+      - name: Build APK (with retry)
         run: |
           cat > buildozer.spec <<EOF
           [app]
@@ -36,8 +52,25 @@ jobs:
           p4a.bootstrap = sdl2
           android.accept_sdk_license = yes
           EOF
-          buildozer -v android debug
+
+          # 设置国内镜像加速 python-for-android 下载
+          export P4A_DOWNLOAD_ALTERNATIVES="true"
+          export P4A_MIRROR_URL="https://ghproxy.com/"
+
+          # 最多重试 3 次，每次失败后等待 10 秒
+          for i in 1 2 3; do
+            echo "Attempt $i..."
+            if buildozer -v android debug; then
+              echo "Build succeeded!"
+              break
+            else
+              echo "Attempt $i failed, retrying in 10 seconds..."
+              sleep 10
+            fi
+          done
+
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: aiimageapp-apk

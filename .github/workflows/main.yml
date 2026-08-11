@@ -1,7 +1,5 @@
-name: Build APK
-on:
-  push:
-  workflow_dispatch:
+name: Build APK with kivy/buildozer-action
+on: [push, workflow_dispatch]
 
 jobs:
   build:
@@ -9,51 +7,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y openjdk-17-jdk git zip unzip
-
-      - name: Configure pip mirror
-        run: |
-          pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-          pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn
-
-      - name: Install Python build tools
-        run: |
-          pip install --upgrade pip
-          pip install cython buildozer
-
       - name: Build APK
-        run: |
-          cat > buildozer.spec <<EOF
-          [app]
-          title = AI图片编辑
-          package.name = aiimageapp
-          package.domain = com.example
-          source.dir = .
-          source.include_exts = py,png,jpg,kv,atlas
-          version = 1.0
-          requirements = python3,kivy,requests,pillow,android
-          orientation = portrait
-          android.permissions = INTERNET
-          android.api = 33
-          android.minapi = 21
-          android.ndk = 25b
-          android.sdk = 33
-          android.build_tools_version = 33.0.0
-          p4a.bootstrap = sdl2
-          android.accept_sdk_license = yes
-          EOF
-
-          buildozer -v android debug
-          # 确保 APK 存在
-          ls -la bin/
+        uses: kivy/buildozer-action@v1
+        with:
+          workdir: .
+          buildozer_spec: |
+            [app]
+            title = AI图片编辑
+            package.name = aiimageapp
+            package.domain = com.example
+            source.dir = .
+            source.include_exts = py,png,jpg,kv,atlas
+            version = 1.0
+            requirements = python3,kivy,requests,pillow,android
+            orientation = portrait
+            android.permissions = INTERNET
+            android.api = 33
+            android.minapi = 21
+            android.ndk = 25b
+            android.sdk = 33
+            android.build_tools_version = 33.0.0
+            p4a.bootstrap = sdl2
+            android.accept_sdk_license = yes
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

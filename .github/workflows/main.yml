@@ -1,34 +1,79 @@
-name: Build APK with kivy/buildozer-action
-on: [push, workflow_dispatch]
+name: Build APK (final)
+on:
+  push:
+  workflow_dispatch:   # 允许手动触发
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # 使用 GitHub Actions 自带的 Android SDK
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build APK
-        uses: kivy/buildozer-action@v1
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          workdir: .
-          buildozer_spec: |
-            [app]
-            title = AI图片编辑
-            package.name = aiimageapp
-            package.domain = com.example
-            source.dir = .
-            source.include_exts = py,png,jpg,kv,atlas
-            version = 1.0
-            requirements = python3,kivy,requests,pillow,android
-            orientation = portrait
-            android.permissions = INTERNET
-            android.api = 33
-            android.minapi = 21
-            android.ndk = 25b
-            android.sdk = 33
-            android.build_tools_version = 33.0.0
-            p4a.bootstrap = sdl2
-            android.accept_sdk_license = yes
+          python-version: '3.10'
+
+      - name: Install build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y openjdk-17-jdk git zip unzip
+          pip install --upgrade pip
+          pip install cython buildozer
+
+      - name: Download Android NDK 25b (with retry)
+        run: |
+          NDK_DIR=$HOME/.buildozer/android/platform/android-ndk-r25b
+          mkdir -p $NDK_DIR
+          cd $NDK_DIR
+          # 尝试下载 NDK，最多重试 5 次，每次超时 5 分钟
+          for i in 1 2 3 4 5; do
+            echo "Download NDK attempt $i..."
+            if wget -q --show-progress --timeout=300 -O ndk.zip \
+              "https://dl.google.com/android/repository/android-ndk-r25b-linux.zip"; then
+              echo "Download succeeded!"
+              unzip -q ndk.zip
+              mv android-ndk-r25b/* . 2>/dev/null
+              rm -rf android-ndk-r25b ndk.zip
+              exit 0
+            else
+              echo "Download failed, retrying in 10s..."
+              sleep 10
+            fi
+          done
+          echo "NDK download failed after 5 attempts"
+          exit 1
+
+      - name: Build APK
+        run: |
+          # 生成 buildozer.spec（使用系统 SDK + 手动下载的 NDK）
+          cat > buildozer.spec <<EOF
+          [app]
+          title = AI图片编辑
+          package.name = aiimageapp
+          package.domain = com.example
+          source.dir = .
+          source.include_exts = py,png,jpg,kv,atlas
+          version = 1.0
+          requirements = python3,kivy,requests,pillow,android
+          orientation = portrait
+          android.permissions = INTERNET
+          android.api = 33
+          android.minapi = 21
+          android.sdk = 33
+          android.build_tools_version = 33.0.0
+          android.ndk = 25b
+          android.ndk_path = $HOME/.buildozer/android/platform/android-ndk-r25b
+          p4a.bootstrap = sdl2
+          android.accept_sdk_license = yes
+          EOF
+
+          # 开始打包
+          buildozer -v android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

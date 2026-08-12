@@ -1,0 +1,9 @@
+{
+  "name": "AI 图片编辑",
+  "short_name": "AI图片编辑",
+  "start_url": "ai_image.html",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#007AFF",
+  "icons": []
+}
